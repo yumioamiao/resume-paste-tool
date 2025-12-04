@@ -3,15 +3,37 @@ import tkinter as tk
 from tkinter import ttk
 import re
 import pyperclip  # 需要安装: pip install pyperclip
+import os  # 新增：导入os模块
+import sys  # 新增：导入sys模块
 
 DATA_FILE = "resume_data.md"
 current_data = {}
+
+# 新增：路径适配核心函数
+def get_resource_path(relative_path):
+    """获取资源文件的绝对路径（适配PyInstaller打包/ macOS .app模式）"""
+    if hasattr(sys, '_MEIPASS'):
+        # PyInstaller 打包后的临时目录（--onefile 模式）
+        base_path = sys._MEIPASS
+    else:
+        # 普通运行模式：获取当前脚本/可执行文件所在目录
+        base_path = os.path.dirname(os.path.abspath(sys.argv[0]))
+    
+    # 适配 macOS .app 包：.app内部路径是 Contents/MacOS/，需要回退到.app同级目录
+    if base_path.endswith("MacOS"):
+        base_path = os.path.abspath(os.path.join(base_path, "../../.."))
+    
+    # 拼接绝对路径
+    return os.path.join(base_path, relative_path)
 
 def load_resume_data():
     """从 Markdown 文件中读取 key: value 数据"""
     global current_data
     try:
-        with open(DATA_FILE, 'r', encoding='utf-8') as f:
+        # 关键修改：使用get_resource_path获取DATA_FILE的绝对路径
+        file_path = get_resource_path(DATA_FILE)
+        # 原代码仅修改了这里的文件路径，其余逻辑不变
+        with open(file_path, 'r', encoding='utf-8') as f:
             lines = f.readlines()
 
         key_value_pairs = {}
@@ -42,7 +64,8 @@ def load_resume_data():
         current_data = key_value_pairs
         return key_value_pairs
     except Exception as e:
-        show_status(f"错误：无法读取 {DATA_FILE} - {str(e)}", duration=5000)
+        # 关键修改：提示信息中显示实际的绝对路径，方便排查问题
+        show_status(f"错误：无法读取 {DATA_FILE}（实际路径：{get_resource_path(DATA_FILE)}） - {str(e)}", duration=5000)
         return {}
 
 def create_gui():
